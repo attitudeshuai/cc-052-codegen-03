@@ -16,6 +16,7 @@ func Setup(
 	activityH *handler.ActivityHandler,
 	inspectionH *handler.InspectionHandler,
 	traceCodeH *handler.TraceCodeHandler,
+	mergeH *handler.MergeHandler,
 	healthH *handler.HealthHandler,
 	rdb *redis.Client,
 ) *gin.Engine {
@@ -51,6 +52,19 @@ func Setup(
 
 		// Trace codes
 		v1.POST("/batches/:id/codes", traceCodeH.Generate)
+
+		// 采集端/手工台账 记录合并
+		v1.POST("/records", mergeH.SubmitRecords)
+		v1.GET("/records", mergeH.ListRecords)
+		v1.POST("/merge/runs", mergeH.RunMerge)
+		v1.GET("/merge/runs", mergeH.ListRuns)
+		v1.GET("/merge/runs/:id", mergeH.GetRun)
+		v1.GET("/merge/runs/:id/reconcile", mergeH.Reconcile)
+		v1.GET("/merge/runs/:id/conflicts", mergeH.ListConflicts)
+		v1.GET("/merge/groups/:id", mergeH.GetGroup)
+		v1.POST("/merge/groups/:id/resolve", mergeH.ResolveGroup)
+		v1.GET("/merge/groups/:id/decisions", mergeH.ListDecisions)
+		v1.GET("/merged-records", mergeH.ListMerged)
 	}
 
 	// Public trace endpoints with rate limiting

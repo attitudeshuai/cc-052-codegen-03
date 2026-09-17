@@ -38,7 +38,26 @@ POST /api/v1/batches/{id}/inspection        上传检测结果
 POST /api/v1/batches/{id}/codes             生成溯源码（返回数量与短码列表）
 GET  /api/v1/trace/{code}                   公开溯源查询（无需鉴权，限流）
 GET  /api/v1/trace/{code}/qrcode            返回二维码 PNG（带缓存头）
+
+# 采集端 / 手工台账 记录合并
+POST /api/v1/records                        上交原始记录（批量，source=collector|ledger；collector 必带 client_uuid 幂等）
+GET  /api/v1/records?unmerged=1             查看暂存区记录
+POST /api/v1/merge/runs                     执行一次合并（把所有未合并记录并成一份）
+GET  /api/v1/merge/runs/{id}                合并运行汇总（合并前后总数）
+GET  /api/v1/merge/runs/{id}/reconcile      对账：total_in == kept + superseded，不符时列出具体 record_id
+GET  /api/v1/merge/runs/{id}/conflicts      待人工挑拣的冲突组（含字段级差异）
+GET  /api/v1/merge/groups/{id}              分组详情（组内各记录取值 + 当前合并产出）
+POST /api/v1/merge/groups/{id}/resolve      人工挑拣（整组选定保留记录 + 逐字段挑选取值来源，留档）
+GET  /api/v1/merge/groups/{id}/decisions    该组的全部抉择档案（自动 + 人工）
+GET  /api/v1/merged-records?run_id=         合并后的台账
 ```
+
+**合并规则**（`migrations/002_merge.sql` + `internal/service/merge_logic.go`）：
+- **认出同一件事**：按 地块 + 作物 + 日期（`happened_at` 的 UTC 日期）+ 操作人 分组。
+- **保留早的**：组内无字段不一致时，自动保留最早提交的一条。
+- **凭据优先**：有冲突且恰有一条带照片凭据时，自动以有凭据的为准。
+- **人工挑拣**：其余冲突挂起（暂留最早一条保证总数完整），人工按字段挑选取值来源；每次定夺（含系统自动）都写入 `merge_decision` 留档，重复处理保留全部历史。
+- **对账**：每次合并运行记录 `total_in / kept / superseded`，恒等式 `total_in = kept + superseded`；`reconcile` 接口逐条核对原始记录与组成员去向，对不上时给出具体 `record_id` / `group_id`。
 
 ## 7. 数据模型
 ```sql
