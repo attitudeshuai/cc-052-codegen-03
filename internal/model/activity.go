@@ -47,7 +47,15 @@ type Activity struct {
 	Photos     StringMap    `db:"photos" json:"photos,omitempty"`
 	Geo        *string      `db:"geo" json:"geo,omitempty"`
 	CreatedAt  time.Time    `db:"created_at" json:"created_at"`
+	// 合并溯源（见 002_merge.sql）
+	Source     string  `db:"source" json:"source"`
+	MergeRunID *int64  `db:"merge_run_id" json:"merge_run_id,omitempty"`
+	MergeState *string `db:"merge_state" json:"merge_state,omitempty"`
+	Note       *string `db:"note" json:"note,omitempty"`
 }
+
+const ActivityColumns = `id, batch_id, client_uuid, kind, happened_at, input_id, dose, dose_unit,
+	operator, photos, geo, created_at, source, merge_run_id, merge_state, note`
 
 type CreateActivityRequest struct {
 	ClientUUID string       `json:"client_uuid" binding:"required"`

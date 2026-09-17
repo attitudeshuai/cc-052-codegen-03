@@ -2,6 +2,7 @@ package repository
 
 import (
 	"cc-052/internal/model"
+	"cc-052/pkg/mergenorm"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -37,4 +38,23 @@ func (r *PlotRepo) ListByFarm(farmID int64) ([]model.Plot, error) {
 		return nil, err
 	}
 	return plots, nil
+}
+
+// NameIndex 返回 (农场ID -> 归一化地块名 -> 地块) 的索引，供手工台账按名称认地块。
+func (r *PlotRepo) NameIndex() (map[int64]map[string]model.Plot, error) {
+	var plots []model.Plot
+	query := `SELECT id, farm_id, name, area_mu, geojson, soil_type, created_at FROM plot ORDER BY id`
+	if err := r.db.Select(&plots, query); err != nil {
+		return nil, err
+	}
+	idx := make(map[int64]map[string]model.Plot)
+	for _, p := range plots {
+		m := idx[p.FarmID]
+		if m == nil {
+			m = make(map[string]model.Plot)
+		}
+		m[mergenorm.PlotName(p.Name)] = p
+		idx[p.FarmID] = m
+	}
+	return idx, nil
 }

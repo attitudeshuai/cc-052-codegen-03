@@ -58,7 +58,8 @@ func main() {
 	inspectionRepo := repository.NewInspectionRepo(db)
 	codeRepo := repository.NewTraceCodeRepo(db)
 	inputMaterialRepo := repository.NewInputMaterialRepo(db)
-	_ = inputMaterialRepo
+	ledgerRepo := repository.NewLedgerRepo(db)
+	mergeRepo := repository.NewMergeRepo(db)
 
 	// Services
 	farmSvc := service.NewFarmService(farmRepo)
@@ -67,6 +68,8 @@ func main() {
 	activitySvc := service.NewActivityService(activityRepo, batchRepo)
 	inspectionSvc := service.NewInspectionService(inspectionRepo, batchRepo)
 	traceCodeSvc := service.NewTraceCodeService(codeRepo, batchRepo, inspectionRepo, activityRepo, plotRepo, farmRepo)
+	ledgerSvc := service.NewLedgerService(ledgerRepo, plotRepo, inputMaterialRepo)
+	mergeSvc := service.NewMergeService(mergeRepo, activityRepo, ledgerRepo, batchRepo, inputMaterialRepo)
 
 	// Handlers
 	farmH := handler.NewFarmHandler(farmSvc)
@@ -75,10 +78,13 @@ func main() {
 	activityH := handler.NewActivityHandler(activitySvc)
 	inspectionH := handler.NewInspectionHandler(inspectionSvc)
 	traceCodeH := handler.NewTraceCodeHandler(traceCodeSvc)
+	ledgerH := handler.NewLedgerHandler(ledgerSvc)
+	mergeH := handler.NewMergeHandler(mergeSvc)
 	healthH := handler.NewHealthHandler(db, rdb)
 
 	// Router
-	r := router.Setup(farmH, plotH, batchH, activityH, inspectionH, traceCodeH, healthH, rdb)
+	r := router.Setup(farmH, plotH, batchH, activityH, inspectionH, traceCodeH,
+		ledgerH, mergeH, healthH, rdb)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ServerPort,
